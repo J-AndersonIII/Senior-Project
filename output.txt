@@ -1,0 +1,7 @@
+[bluetooth]# [0;94m[bluetooth][0m# [K[[0;92mNEW[0m] Controller B8:27:EB:AE:DD:51 raspberrypi [default]
+[0;94m[bluetooth][0m# [K[[0;92mNEW[0m] Device EC:88:92:C9:32:C4 Nexus 6
+[0;94m[bluetooth][0m# devices
+Device EC:88:92:C9:32:C4 Nexus 6
+[0;94m[bluetooth][0m# quit
+[0;94m[bluetooth][0m# [K[[0;91mDEL[0m] Controller B8:27:EB:AE:DD:51 raspberrypi [default]
+[0;94m[bluetooth][0m# [bluetooth]# [K
