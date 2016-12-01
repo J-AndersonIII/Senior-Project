@@ -43,7 +43,11 @@ def scanDev():
     del alist[0]
     alist = [w.replace('\t', ' ') for w in alist]
     alist = [removeSpace(s) for s in alist]
+    return alist
 
+
+
+    '''
     print("\nPlease select your device (enter 'r' to rescan):  \n")
     print('\n'.join('\t{}. {}'.format(*line) for line in enumerate(alist)))
 
@@ -58,6 +62,7 @@ def scanDev():
         print("Please select a valid mac address (If yours isn't listed, enter 'r' to re-scan)")
         time.sleep(2)
         return scanDev()
+    '''
 
 
     

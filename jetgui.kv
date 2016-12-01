@@ -1,0 +1,122 @@
+<jetGUIRoot>:
+    orientation: "vertical"
+
+    ActionBar:
+        ActionView:
+            ActionPrevious:
+                title: "Alpha Version 1.2.0"
+                with_previous: False
+            ActionOverflow:
+                ActionButton:
+                    text: "Kivy Settings"
+                    on_press: app.open_settings()
+
+
+    ScreenManager:
+        id: kivy_screen_manager
+        StartScreen:
+            name: "start_screen"
+        AboutScreen:
+            id: about_screen
+            name: "about_screen"
+        PhoneScreen:
+            id: phone_screen
+            name: "phone_screen"
+
+
+<StartScreen@Screen>:
+    BoxLayout:
+        orientation: "vertical"
+        padding: root.width * .02, root.height * .02
+        spacing: min(root.width, root.height) * .02
+
+        Label:
+            text: "[b]JET Monitoring Systems[/b]"
+            markup: True
+            font_size: root.height / 20
+
+        Button:
+            text: "Add a Device"
+            on_release: app.root.changeScreen(self.text.lower())
+        Button:
+            text: "Remove Device"
+            on_release: app.root.scanDevices()
+        Button:
+            text: "Monitor Mode"
+        Button:
+            text: "About this App"
+            on_release: app.root.changeScreen(self.text.lower())
+
+
+<AboutScreen@Screen>:
+    BoxLayout:
+        orientation: "vertical"
+        padding: root.width * .02, root.height * .02
+        Label:
+            text: app.getText()
+            halign: "center"
+            markup: True
+            font_size: root.height / 20
+            text_size: self.width, None
+            center_y: .5
+
+        Button:
+            text: "Go Back"
+            size_hint: (.1,.1)
+            on_release: app.root.onBackBtn()
+
+<PhoneScreen@Screen>:
+    phone_number: phone_number
+    FloatLayout:
+        orientation: "vertical"
+        Label:
+            text_size: self.size
+            text: "\nPlease enter your phone number (only digits!):"
+            halign: "left"
+            valign: "top"
+            markup: True
+            font_size: root.height / 15
+
+        Label:
+            id: phone_number
+            text: ""
+            text_size: self.size
+            halign: "center"
+            pos_hint: {'y': 0.6}
+            markup: True
+            font_size: 40
+
+        Button:
+            size_hint: (.1, .1)
+            text: "Go Back"
+            on_release: app.root.onBackBtn()
+
+        KeyPad:
+
+<PhonePopup>:
+    size_hint: .8, .8
+    title: "Please Verify your Phone Number:"
+    title_size: root.height * .05
+    auto_dismiss: False
+    message: message
+    yes_button: yes_button
+    no_button: no_button
+    BoxLayout:
+        orientation: "vertical"
+        padding: root.width * .02, root.height * .02
+        spacing: min(root.width, root.height) * .02
+
+        Label:
+            id: message
+            text: app.root.ids.phone_screen.phone_number.text
+            halign: "center"
+            font_size: root.height / 10
+            text_size: self.width, None
+            center_y: .5
+
+        Button:
+            id: yes_button
+            text: "Yep! That's it."
+            size_hint: 1, None
+            height: root.height / 8
+

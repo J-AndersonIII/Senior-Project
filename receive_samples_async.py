@@ -24,15 +24,18 @@ def getStatus():
     xbee = XBee(ser)
 
     # Do other stuff in the main thread
-    packet = xbee.wait_read_frame()
+    packet = xbee.wait_read_frame(100)
     time.sleep(.5)
-    if packet ['id'] == 'rx_io_data':
-        if packet['samples'][0]['dio-0'] == False:
-            eric=0;
-        if packet['samples'][0]['dio-0'] == True:
-            eric=1;
+    wait=1
+    while wait: 
+        wait= packet['samples'][0]['dio-0']
+
+     #  if packet['samples'][0]['dio-0'] == False:
+     #       eric=0;
+     #   if packet['samples'][0]['dio-0'] == True:
+     #       eric=1;
     print('\n Xbee status is!!!')
-    print eric
+    print wait 
     
     # halt() must be called before closing the serial
     # port in order to ensure proper thread shutdown
