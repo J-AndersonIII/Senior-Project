@@ -22,6 +22,9 @@
         PhoneScreen:
             id: phone_screen
             name: "phone_screen"
+        ScanningScreen:
+            id: scanning_screen
+            name: "scanning_screen"
 
 
 <StartScreen@Screen>:
@@ -46,6 +49,14 @@
         Button:
             text: "About this App"
             on_release: app.root.changeScreen(self.text.lower())
+
+<ScanningScreen@Screen>:
+    FloatLayout:
+        orientation: "vertical"
+
+        Label:
+            font_size: root.height / 15
+            text: "Before selecting the scanning button, please be sure..."
 
 
 <AboutScreen@Screen>:

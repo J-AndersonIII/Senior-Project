@@ -35,6 +35,8 @@ class jetGUIRoot(BoxLayout):
         else:
             if next_screen == "add a device":
                 self.ids.kivy_screen_manager.current = "phone_screen"
+            if next_screen == "scanningscreen":
+                self.ids.kivy_screen_manager.current = "scanning_screen"
 
     def onBackBtn(self):
         # If there's any screen in this list currently...
@@ -42,6 +44,7 @@ class jetGUIRoot(BoxLayout):
             # If there's a screen to go back to, go back to it.
             self.ids.kivy_screen_manager.current = self.screen_list.pop()
 
+    # IMPLEMENT THIS ELSWHERE WHEN NEEDED (REMOVE IT FROM THE ROOT CLASS!
     def scanDevices(self):
         self.mac_list = bh.scanDev()
         print self.mac_list
@@ -64,6 +67,7 @@ class PhonePopup(Popup):
 
         root.device_list.append(Device(phone_number.text))
         self.dismiss()
+        root.changeScreen("scanningscreen")
 
     def stayHere(self):
         phone_screen = App.get_running_app().root.ids.phone_screen
