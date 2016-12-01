@@ -19,6 +19,8 @@ class jetGUIRoot(BoxLayout):
         self.screen_list = []
         self.mac_list = []
         self.device_list = []
+        self.current_number = ""
+        self.phone_popup = PhonePopup()
 
     def changeScreen(self, next_screen):
         operations = ["add a device", "remove a device", "monitor mode"]
@@ -55,6 +57,22 @@ class PhonePopup(Popup):
     def __init__(self, *args, **kwargs):
         super(PhonePopup, self).__init__(*args, **kwargs)
 
+    def moveOn(self):
+        phone_screen = App.get_running_app().root.ids.phone_screen
+        phone_number = phone_screen.phone_number
+        root = App.get_running_app().root
+
+        root.device_list.append(Device(phone_number.text))
+        self.dismiss()
+
+    def stayHere(self):
+        phone_screen = App.get_running_app().root.ids.phone_screen
+        phone_number = phone_screen.phone_number
+        root = App.get_running_app().root
+
+        phone_number.text = ""
+        self.dismiss()
+
 
 class KeyPad(GridLayout):
     ''' Documentation for KeyPad
@@ -83,10 +101,10 @@ class KeyPad(GridLayout):
         if btn.text.isdigit() and len(phone_number.text) < 10:
             phone_number.text += btn.text
         if btn.text == "Done" and len(phone_number.text) == 10:
-            # THIS IS WHERE THE POP UP FOR CONFIRMATION WILL GO
-            root.device_list.append(Device(phone_number.text))
-            print "hello world - " + phone_number.text
-            print root.device_list[0].pNum
+            root.current_number = phone_number.text
+            root.phone_popup.open()
+            root.phone_popup.message.text = phone_number.text
+            print len(root.device_list)
         if btn.text == "Clear" and len(phone_number.text) != 0:
             phone_number.text = ""
 

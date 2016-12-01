@@ -108,7 +108,7 @@
 
         Label:
             id: message
-            text: app.root.ids.phone_screen.phone_number.text
+            text: ""
             halign: "center"
             font_size: root.height / 10
             text_size: self.width, None
@@ -119,4 +119,11 @@
             text: "Yep! That's it."
             size_hint: 1, None
             height: root.height / 8
+            on_release: root.moveOn()
 
+        Button:
+            id: no_button
+            text: "Nope! That's not right!"
+            size_hint: 1, None
+            height: root.height / 8
+            on_release: root.stayHere()
