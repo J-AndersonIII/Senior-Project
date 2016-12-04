@@ -25,6 +25,9 @@
         ScanningScreen:
             id: scanning_screen
             name: "scanning_screen"
+        AvailableDevScreen:
+            id: available_dev_screen
+            name: "available_dev_screen"
 
 
 <StartScreen@Screen>:
@@ -40,23 +43,65 @@
 
         Button:
             text: "Add a Device"
+            font_size: 20
             on_release: app.root.changeScreen(self.text.lower())
         Button:
             text: "Remove Device"
+            font_size: 20
             on_release: app.root.scanDevices()
         Button:
             text: "Monitor Mode"
+            font_size: 20
         Button:
             text: "About this App"
+            font_size: 20
             on_release: app.root.changeScreen(self.text.lower())
+
 
 <ScanningScreen@Screen>:
     FloatLayout:
         orientation: "vertical"
 
         Label:
+            text_size: self.size
+            pos_hint: {'x': 0, 'y': 0.7}
             font_size: root.height / 15
-            text: "Before selecting the scanning button, please be sure..."
+            markup: True
+            text: app.scanText()
+
+        Button:
+            size_hint: (.75, .15)
+            pos_hint: {'center_x': .5, 'center_y': .4}
+            text: "[b]Start the scan! (Bluetooth is enabled and my device is visible!)[/b]"
+            markup: True
+            font_size: 20
+            on_release: root.scanTransition()
+
+
+<AvailableDevScreen@Screen>:
+    on_enter: available_devices.generateStack()
+    FloatLayout
+        orientation: "vertical"
+
+        Label:
+            text_size: self.size
+            font_size: root.height / 15
+            pos_hint: {'x': 0, 'y': 0.86}
+            markup: True
+            text: "Please select your device below:"
+
+        AvailableDevices:
+            id: available_devices
+            orientation: "vertical"
+            spacing: min(root.width, root.height) * .02
+            pos_hint: {'center_x': .56, 'center_y': .3}
+
+        Button:
+            size_hint: (.2, .1)
+            text: "[b]I dont see my device?[/b]"
+            markup: True
+            on_release: available_devices.noDevFound()
+            pos_hint: {'x': 0.75, 'y': 0.85}
 
 
 <AboutScreen@Screen>:
@@ -75,6 +120,7 @@
             text: "Go Back"
             size_hint: (.1,.1)
             on_release: app.root.onBackBtn()
+
 
 <PhoneScreen@Screen>:
     phone_number: phone_number
@@ -103,6 +149,30 @@
             on_release: app.root.onBackBtn()
 
         KeyPad:
+
+<PairPopup>:
+    on_open: self.pairDevices()
+    on_dismiss: self.connDevices()
+    size_hint: .8, .8
+    title: "Last Step!"
+    valign: "center"
+    title_size: root.height * .05
+    auto_dismiss: False
+    BoxLayout:
+        orientation: "vertical"
+        padding: root.width * .02, root.height * .02
+        spacing: min(root.width, root.height) * .02
+
+        Label:
+            text: "Pleaes select 'Jet Monitoring Systems' from your list of available bluetooth devices."
+            halign: "center"
+            font_size: root.height / 10
+            text_size: self.width, None
+            center_y: .5
+        Label:
+            text: "Waiting..."
+            halign: "left"
+            font_size: root.height / 10
 
 <PhonePopup>:
     size_hint: .8, .8

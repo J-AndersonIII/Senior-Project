@@ -2,12 +2,18 @@ from kivy.app import App
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.properties import ObjectProperty
+from kivy.properties import ListProperty
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.stacklayout import StackLayout
 from kivy.uix.screenmanager import Screen
+from kivy.uix.floatlayout import FloatLayout
+from functools import partial
 
 import btoothHndl as bh
+import time
+import subprocess
 
 
 class jetGUIRoot(BoxLayout):
@@ -21,6 +27,7 @@ class jetGUIRoot(BoxLayout):
         self.device_list = []
         self.current_number = ""
         self.phone_popup = PhonePopup()
+        self.pair_popup = PairPopup()
 
     def changeScreen(self, next_screen):
         operations = ["add a device", "remove a device", "monitor mode"]
@@ -37,6 +44,8 @@ class jetGUIRoot(BoxLayout):
                 self.ids.kivy_screen_manager.current = "phone_screen"
             if next_screen == "scanningscreen":
                 self.ids.kivy_screen_manager.current = "scanning_screen"
+            if next_screen == "availabledevscreen":
+                self.ids.kivy_screen_manager.current = "available_dev_screen"
 
     def onBackBtn(self):
         # If there's any screen in this list currently...
@@ -44,10 +53,51 @@ class jetGUIRoot(BoxLayout):
             # If there's a screen to go back to, go back to it.
             self.ids.kivy_screen_manager.current = self.screen_list.pop()
 
-    # IMPLEMENT THIS ELSWHERE WHEN NEEDED (REMOVE IT FROM THE ROOT CLASS!
     def scanDevices(self):
-        self.mac_list = bh.scanDev()
-        print self.mac_list
+        App.get_running_app().data = bh.scanDev()
+        print "scan devices run succesful"
+        return App.get_running_app().data
+
+                    
+
+
+
+class PairPopup(Popup):
+    ''' Popup for the user to add their phone for pairing and ultimately
+        connecting.
+    '''
+    status_label = ObjectProperty()
+
+    def __init__(self, *args, **kwargs):
+        super(PairPopup, self).__init__(*args, **kwargs)
+        self.timeout = 0
+
+    def pairDevices(self):
+        myDevice = App.get_running_app().root.device_list[-1]
+        myAdd = myDevice.mAdd
+        self.timeout = 30
+
+        while True:
+            if bh.pairDev(myAdd) == False and self.timeout != 0:
+                self.timeout = self.timeout - 1
+                time.sleep(1)
+                continue
+            if bh.pairDev(myAdd) == False and self.timeout == 0:
+                print "Pair function timed out!"
+                self.dismiss()
+                time.sleep(3)
+                break
+            if bh.pairDev(myAdd) == True:
+                self.dismiss()
+                print "Pair successful! Attempting to connect."
+                time.sleep(3)
+                break
+
+    def connDevices(self):
+        myDevice = App.get_running_app().root.device_list[-1]
+        myAdd = myDevice.mAdd
+
+        bh.connDev(myAdd)
 
 
 class PhonePopup(Popup):
@@ -78,8 +128,64 @@ class PhonePopup(Popup):
         self.dismiss()
 
 
+class ScanningScreen(Screen):
+    someList = ListProperty([])
+    def __init__(self, *args, **kwargs):
+        super(ScanningScreen, self).__init__(*args, **kwargs)
+
+    def scanTransition(self):
+        root = App.get_running_app().root
+        print "Hell Yeah boi"
+        App.get_running_app().root.mac_list = root.scanDevices()
+        root.changeScreen("availabledevscreen")
+
+
+class AvailableDevices(GridLayout):
+    ''' This screen needs to operate a bluetooth scan
+        and then recieve the list of devices (from scanDev)
+        and display them.
+    '''
+    def __init__(self, *args, **kwargs):
+        super(AvailableDevices, self).__init__(*args, **kwargs)
+        self.cols = 2
+        self.row_force_default = True
+        self.col_force_default = True
+        self.row_default_height = 50
+        self.col_default_width = 350
+
+    def generateStack(self):
+        print "Were gererating BABY"
+        mac_list = App.get_running_app().root.mac_list
+        #myList = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
+        print mac_list
+        #for device in myList:
+        for device in mac_list:
+            self.add_widget(Button(text=device, font_size=20, on_release=self.onBtnPress))
+
+    def noDevFound(self):
+        self.clear_widgets()
+        del App.get_running_app().root.mac_list[:]
+        print App.get_running_app().root.mac_list
+        App.get_running_app().root.onBackBtn()
+
+    def onBtnPress(self, btn):
+        root = App.get_running_app().root
+        mac_address = btn.text[0:17]
+        device_name = btn.text[18:]
+
+        root.device_list[-1].setMac(mac_address)
+        root.device_list[-1].setName(device_name)
+        root.device_list[-1].printDevice()
+        del App.get_running_app().root.mac_list[:]
+        root.pair_popup.open()
+
+
+
 class KeyPad(GridLayout):
-    ''' Documentation for KeyPad
+    ''' This generates a basic numpad and allows
+        the user to input their phone number. It
+        also builds a "done" and "clear" button
+        for convenience.
     '''
     def __init__(self, *args, **kwargs):
         super(KeyPad, self).__init__(*args, **kwargs)
@@ -116,12 +222,17 @@ class KeyPad(GridLayout):
 class Device(object):
     def __init__(self, number):
         self.pNum = number
+        self.mAdd = ""
+        self.devName = ""
 
-    def setMac(address):
-        self.mAdd = adress
+    def setMac(self, address):
+        self.mAdd = address
 
-    def setName(name):
+    def setName(self, name):
         self.devName = name
+
+    def printDevice(self):
+        print ("The device name is %s, its mac address is %s, and its phone number is %s"%(self.devName, self.mAdd, self.pNum))
 
 
 class jetGUIApp(App):
@@ -131,6 +242,9 @@ class jetGUIApp(App):
         super(jetGUIApp, self).__init__(**kwargs)
 
     def build(self):
+        subprocess.call(['pulseaudio', '--kill'])
+        time.sleep(.2)
+        subprocess.call(['pulseaudio', '--start'])
         return jetGUIRoot()
 
     def getText(self):
@@ -138,7 +252,13 @@ class jetGUIApp(App):
                 " Kivy, a Python framework.\n It was created"
                 " for academic purposes and is free for"
                 " anyone to use and modify! Enjoy! :)"
-                "\n~Jerome, Eric & Tsu")
+                "\n~Jerome, Eric & Tsue")
+
+    def scanText(self):
+        return ("[b][u]IMPORTANT:[/b][/u] Before selecting the scanning button, please be"
+                "\nsure to enable your device's bluetooth setting and make sure"
+                "\nthat it is visible to other bluetooth devices!")
+
 
 if __name__ == "__main__":
     jetGUIApp().run()

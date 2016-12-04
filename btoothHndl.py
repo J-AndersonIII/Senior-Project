@@ -13,20 +13,14 @@ def pairDev(maddr):
     #  The script stores the output of bluetoothctl in a output.txt file for processing
 
     device = ('Device ' + maddr)
-    i = 0
 
-    while i < 5:
-        subprocess.call(['./btooth_scan.sh'])
-        if device in open('output.txt').read():
-            paired = True
-            break
-        else:
-            paired = False
-            print('\n...Searching...')
-            time.sleep(5)
-            i+=1
-            continue
+    subprocess.call(['./btooth_scan.sh'])
+    if device in open('output.txt').read():
+        paired = True
 
+    else:
+        paired = False
+        print('\n...Searching...')
     return paired
 
 
@@ -69,8 +63,6 @@ def scanDev():
 def connDev(maddr):
     #  Uses pexpect to spawn a quick instance of bluetoothctl and send the command to connect
 
-    maddr = maddr[0:17]
-
     child = pexpect.spawn('bluetoothctl')
     child.expect('# ')
     child.sendline('connect ' + maddr)
@@ -79,12 +71,8 @@ def connDev(maddr):
 
 def rssiDev(maddr):
     #  Uses subprocess to run an instance of hcitool using the rssi command
-
-    maddr = maddr[0:17]
-
     out = subprocess.Popen(['hcitool', 'rssi', maddr], stdout=subprocess.PIPE)
     line = out.stdout.readline()
     line.strip()
     value = int(filter(str.isdigit, line))
-    time.sleep(3)
     return value
