@@ -16,6 +16,8 @@
         id: kivy_screen_manager
         StartScreen:
             name: "start_screen"
+        MonitorScreen:
+            name: "monitor_screen"
         AboutScreen:
             id: about_screen
             name: "about_screen"
@@ -45,18 +47,31 @@
             text: "Add a Device"
             font_size: 20
             on_release: app.root.changeScreen(self.text.lower())
+
         Button:
             text: "Remove Device"
             font_size: 20
-            on_release: app.root.scanDevices()
+            on_release: #TODO
+
         Button:
             text: "Monitor Mode"
             font_size: 20
+            on_release: app.root.changeScreen(self.text.lower())
+
         Button:
             text: "About this App"
             font_size: 20
             on_release: app.root.changeScreen(self.text.lower())
 
+<MonitorScreen@Screen>:
+    on_enter: test.runMode()
+    Test:
+        id: test
+        Button:
+            text: "Exit Monitor Mode"
+            size_hint: (.3,.1)
+            pos_hint: {'x': 0, 'y': 0}
+            on_release: test.exitMode()
 
 <ScanningScreen@Screen>:
     FloatLayout:
@@ -155,8 +170,9 @@
     on_dismiss: self.connDevices()
     size_hint: .8, .8
     title: "Last Step!"
+    title_align: "center"
     valign: "center"
-    title_size: root.height * .05
+    title_size: 30
     auto_dismiss: False
     BoxLayout:
         orientation: "vertical"
@@ -164,15 +180,17 @@
         spacing: min(root.width, root.height) * .02
 
         Label:
-            text: "Pleaes select 'Jet Monitoring Systems' from your list of available bluetooth devices."
+            text: app.getLabel()
             halign: "center"
-            font_size: root.height / 10
+            font_size: root.height / 13
             text_size: self.width, None
             center_y: .5
+
         Label:
-            text: "Waiting..."
-            halign: "left"
-            font_size: root.height / 10
+            text: "Searching..."
+            font_size: root.height / 13
+            text_size: self.width, None
+            center_y: .5
 
 <PhonePopup>:
     size_hint: .8, .8

@@ -3,6 +3,7 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.properties import ObjectProperty
 from kivy.properties import ListProperty
+from kivy.properties import StringProperty
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
@@ -10,10 +11,14 @@ from kivy.uix.stacklayout import StackLayout
 from kivy.uix.screenmanager import Screen
 from kivy.uix.floatlayout import FloatLayout
 from functools import partial
+from kivy.clock import Clock
 
 import btoothHndl as bh
 import time
 import subprocess
+import serial
+from xbee import XBee
+import RPi.GPIO as GPIO
 
 
 class jetGUIRoot(BoxLayout):
@@ -46,6 +51,11 @@ class jetGUIRoot(BoxLayout):
                 self.ids.kivy_screen_manager.current = "scanning_screen"
             if next_screen == "availabledevscreen":
                 self.ids.kivy_screen_manager.current = "available_dev_screen"
+            if next_screen == "startscreen":
+                del self.screen_list[:]
+                self.ids.kivy_screen_manager.current = "start_screen"
+            if next_screen == "monitor mode":
+                self.ids.kivy_screen_manager.current = "monitor_screen"
 
     def onBackBtn(self):
         # If there's any screen in this list currently...
@@ -58,7 +68,61 @@ class jetGUIRoot(BoxLayout):
         print "scan devices run succesful"
         return App.get_running_app().data
 
-                    
+
+class Test(FloatLayout):
+    def __init__(self, *args, **kwargs):
+        super(Test, self).__init__(*args, **kwargs)
+        self.door_email_counter = 0
+        self.low_battery_counter = 0
+        self.temp_counter = 0
+        self.timer1 = 0
+        self.timer2 = 0
+        self.timer3 = 0
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        #ser = serial.Serial('/dev/ttyUSB0', 9600)
+        #xbee = XBee(ser, callback=msgDump())
+        self.button_status = False
+
+
+    def runMode(self):
+        Clock.schedule_interval(self.monMode, 0.5)
+
+    def exitMode(self):
+        Clock.unschedule(self.monMode)
+        App.get_running_app().root.changeScreen("startscreen")
+
+    def monMode(self, dt):
+        maintimer = time.time()
+        reset1 = self.timer1 - maintimer
+        reset2 = self.timer2 - maintimer
+        reset3 = self.timer3 - maintimer
+
+        if reset1 >= 15:
+            self.timer1 = time.time()
+            self.door_email_counter = 0
+
+        if reset2 >= 15:
+            self.timer2 = time.time()
+            self.low_battery_counter = 0
+
+        if reset3 >= 15:
+            self.timer3 = time.time()
+            self.temp_counter = 0
+
+        if GPIO.input(17):
+            #SEND EMAIL HERE FOR BACKUP BATTERY
+            print "Who the fuck unplugged me!"
+
+        if self.button_status == True:
+            print "exception successfully raised!"
+            xbee.halt()
+            ser.close()
+            GPIO.cleanup()
+
+    def msgDump(self, packet):
+        print "MSG DUMP RUN"
+
 
 
 
@@ -66,8 +130,6 @@ class PairPopup(Popup):
     ''' Popup for the user to add their phone for pairing and ultimately
         connecting.
     '''
-    status_label = ObjectProperty()
-
     def __init__(self, *args, **kwargs):
         super(PairPopup, self).__init__(*args, **kwargs)
         self.timeout = 0
@@ -84,12 +146,14 @@ class PairPopup(Popup):
                 continue
             if bh.pairDev(myAdd) == False and self.timeout == 0:
                 print "Pair function timed out!"
+                #status_label.text = "Timed out! No Device Found!"
                 self.dismiss()
                 time.sleep(3)
                 break
             if bh.pairDev(myAdd) == True:
                 self.dismiss()
                 print "Pair successful! Attempting to connect."
+                #status.label.text = "Success! You're all set!"
                 time.sleep(3)
                 break
 
@@ -98,6 +162,8 @@ class PairPopup(Popup):
         myAdd = myDevice.mAdd
 
         bh.connDev(myAdd)
+
+        App.get_running_app().root.changeScreen("startscreen")
 
 
 class PhonePopup(Popup):
@@ -116,6 +182,7 @@ class PhonePopup(Popup):
         root = App.get_running_app().root
 
         root.device_list.append(Device(phone_number.text))
+        phone_number.text = ""
         self.dismiss()
         root.changeScreen("scanningscreen")
 
@@ -258,6 +325,11 @@ class jetGUIApp(App):
         return ("[b][u]IMPORTANT:[/b][/u] Before selecting the scanning button, please be"
                 "\nsure to enable your device's bluetooth setting and make sure"
                 "\nthat it is visible to other bluetooth devices!")
+
+    def getLabel(self):
+        return ("\nPlease select\n'Jet Monitoring Systems'\nfrom your list"
+                " of available bluetooth devices. After that you're"
+                " all set!")
 
 
 if __name__ == "__main__":

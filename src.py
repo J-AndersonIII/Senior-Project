@@ -78,10 +78,6 @@ def main():
                         count = 0
                         print('\nAll good...')
 
-            elif int(ans) == 6:
-                flag = zigbee.getStatus()
-                time.sleep(3)
-
 
             else:
                 print("Please use one of the Available Commands!")
