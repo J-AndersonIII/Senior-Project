@@ -19,6 +19,7 @@ import subprocess
 import serial
 from xbee import XBee
 import RPi.GPIO as GPIO
+import smtplib
 
 
 class jetGUIRoot(BoxLayout):
@@ -44,6 +45,7 @@ class jetGUIRoot(BoxLayout):
 
         if next_screen == "about this app":
             self.ids.kivy_screen_manager.current = "about_screen"
+
         else:
             if next_screen == "add a device":
                 self.ids.kivy_screen_manager.current = "phone_screen"
@@ -55,7 +57,8 @@ class jetGUIRoot(BoxLayout):
                 del self.screen_list[:]
                 self.ids.kivy_screen_manager.current = "start_screen"
             if next_screen == "monitor mode":
-                self.ids.kivy_screen_manager.current = "monitor_screen"
+                if App.get_running_app().root.device_list:
+                    self.ids.kivy_screen_manager.current = "monitor_screen"
 
     def onBackBtn(self):
         # If there's any screen in this list currently...
@@ -80,23 +83,77 @@ class Test(FloatLayout):
         self.timer3 = 0
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        #ser = serial.Serial('/dev/ttyUSB0', 9600)
-        #xbee = XBee(ser, callback=msgDump())
-        self.button_status = False
+        self.ser = serial.Serial('/dev/ttyUSB0', 9600)
+        self.s = smtplib.SMTP('smtp.gmail.com',587)
 
+    def doorEmail(self):
+        self.smtpUser = "emicallef25@gmail.com"
+        self.smtpPass = "thierry14"
+        phone_number = App.get_running_app().root.device_list[-1].pNum
+        self.toAdd = "%s@vtext.com"%(phone_number)
+        self.fromAdd = self.smtpUser
+        self.subject = "Jet Monitoring Systems"
+        self.header = "To: %s\nFrom: %s\nSubject: %s"%(self.toAdd, self.fromAdd, self.subject)
+        self.body = "WAIT!!! You have windows/doors that have not been closed yet!"
+
+        print "%s\n\n%s"%(self.header, self.body)
+        self.s.ehlo()
+        self.s.starttls()
+        self.s.ehlo()
+
+        self.s.login(self.smtpUser, self.smtpPass)
+        self.s.sendmail(self.fromAdd, self.toAdd, self.header + '\n\n' + self.body)
+
+        self.s.quit()
+        return
+
+    def lowBattEmail(self):
+        self.smtpUser = "emicallef25@gmail.com"
+        self.smtpPass = "thierry14"
+        phone_number = App.get_running_app().root.device_list[-1].pNum
+        self.toAdd = "%s@vtext.com"%(phone_number)
+        self.fromAdd = self.smtpUser
+        self.subject = "Jet Monitoring Systems"
+        self.header = "To: %s\nFrom: %s\nSubject: %s"%(self.toAdd, self.fromAdd, self.subject)
+        self.body = "WARNING XBee Sensor Low Batter Detected!"
+
+        print "%s\n\n%s"%(self.header, self.body)
+        self.s.ehlo()
+        self.s.starttls()
+        self.s.ehlo()
+
+        self.s.login(self.smtpUser, self.smtpPass)
+        self.s.sendmail(self.fromAdd, self.toAdd, self.header + '\n\n' + self.body)
+
+        self.s.quit()
+        return
+
+    def backupEmail(self):
+        ''' Tsue's...still waiiting...might not get done
+        '''
+        pass
 
     def runMode(self):
-        Clock.schedule_interval(self.monMode, 0.5)
+        Clock.schedule_interval(self.monMode, 1)
 
     def exitMode(self):
         Clock.unschedule(self.monMode)
+        self.xbee.halt()
+        self.ser.close()
+        GPIO.cleanup()
         App.get_running_app().root.changeScreen("startscreen")
 
     def monMode(self, dt):
+        self.xbee = XBee(self.ser, callback=self.msgSend)
         maintimer = time.time()
         reset1 = self.timer1 - maintimer
         reset2 = self.timer2 - maintimer
         reset3 = self.timer3 - maintimer
+        devices = App.get_running_app().root.device_list
+
+        for device in devices:
+            device.setRssi(bh.rssiDev(device.mAdd))
+            print "%s's rssi is %s"%(device.devName, device.Rssi) 
 
         if reset1 >= 15:
             self.timer1 = time.time()
@@ -114,14 +171,17 @@ class Test(FloatLayout):
             #SEND EMAIL HERE FOR BACKUP BATTERY
             print "Who the fuck unplugged me!"
 
-        if self.button_status == True:
-            print "exception successfully raised!"
-            xbee.halt()
-            ser.close()
-            GPIO.cleanup()
+    def msgSend(self, packet):
+        print packet
+        devices = App.get_running_app().root.device_list
+        if packet['id'] == "rx_io_data":
+            if packet['samples'][0]['dio-1'] == False and self.door_email_counter == 0 and devices[-1].Rssi >= 3:
+                self.door_email_counter+=1
+                self.doorEmail()
 
-    def msgDump(self, packet):
-        print "MSG DUMP RUN"
+            if packet['samples'][0]['dio-4'] == False and self.low_battery_counter == 0:
+                self.low_battery_counter+=1
+                self.lowBattEmail()
 
 
 
@@ -142,7 +202,7 @@ class PairPopup(Popup):
         while True:
             if bh.pairDev(myAdd) == False and self.timeout != 0:
                 self.timeout = self.timeout - 1
-                time.sleep(1)
+                time.sleep(0.5)
                 continue
             if bh.pairDev(myAdd) == False and self.timeout == 0:
                 print "Pair function timed out!"
@@ -154,7 +214,7 @@ class PairPopup(Popup):
                 self.dismiss()
                 print "Pair successful! Attempting to connect."
                 #status.label.text = "Success! You're all set!"
-                time.sleep(3)
+                time.sleep(1)
                 break
 
     def connDevices(self):
@@ -291,12 +351,16 @@ class Device(object):
         self.pNum = number
         self.mAdd = ""
         self.devName = ""
+        self.Rssi = 0
 
     def setMac(self, address):
         self.mAdd = address
 
     def setName(self, name):
         self.devName = name
+
+    def setRssi(self, value):
+        self.Rssi = value
 
     def printDevice(self):
         print ("The device name is %s, its mac address is %s, and its phone number is %s"%(self.devName, self.mAdd, self.pNum))

@@ -15,7 +15,6 @@ import serial
 def getStatus():
     PORT = '/dev/ttyUSB0'
     BAUD_RATE = 9600
-    eric = 3
 
     # Open serial port
     ser = serial.Serial(PORT, BAUD_RATE)
@@ -24,7 +23,6 @@ def getStatus():
     xbee = XBee(ser)
 
     # Do other stuff in the main thread
-    packet = xbee.wait_read_frame(100)
     time.sleep(.5)
     wait=1
     while wait: 
